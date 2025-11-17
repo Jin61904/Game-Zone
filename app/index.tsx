@@ -1,3 +1,4 @@
+// app/index.tsx
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -33,11 +34,11 @@ export default function WelcomeScreen() {
   };
 
   const goToApp = () => {
-    // Navega al grupo de pestañas
-    router.replace('/tabs/index');
+    router.replace('/(tabs)');
   };
 
   const handleAuthSuccess = (userData: User) => {
+    // Aquí llega el usuario desde la API propia
     setUser(userData);
     setAuthVisible(false);
     goToApp();
@@ -45,6 +46,7 @@ export default function WelcomeScreen() {
 
   const handleLogout = () => {
     setUser(null);
+    // aquí luego puedes limpiar token, etc.
   };
 
   return (
@@ -57,7 +59,7 @@ export default function WelcomeScreen() {
         <View style={styles.content}>
           {/* Icono redondo */}
           <View style={styles.iconWrapper}>
-            <View style={styles.iconCircle}>
+            <View className="iconCircle" style={styles.iconCircle}>
               <MaterialCommunityIcons
                 name="gamepad-variant"
                 size={42}
@@ -123,7 +125,7 @@ export default function WelcomeScreen() {
           )}
         </View>
 
-        {/* Modal de login/registro */}
+        {/* Modal de login/registro CONECTADO A LA API */}
         <AuthModal
           isOpen={authVisible}
           mode={authMode}
