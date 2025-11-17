@@ -34,7 +34,7 @@ export default function WelcomeScreen() {
   };
 
   const goToApp = () => {
-    router.replace('/(tabs)');
+    router.replace('/tabs/home');
   };
 
   const handleAuthSuccess = (userData: User) => {
