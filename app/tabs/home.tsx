@@ -8,26 +8,35 @@ import React, { useEffect, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 
 // TEMPORAL: Datos mock hasta conectar Firebase
-import { mockFeatured, mockProducts } from "@/mock/products";
+import { getAllProducts, getFeaturedProducts } from "@/lib/products";
+
 
 export default function HomeScreen() {
   const [category, setCategory] = useState("all");
   const [cartCount, setCartCount] = useState(1); // luego viene de firestore
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState<any[]>([]);
+  const [featured, setFeatured] = useState<any[]>([]);
+
 
   // Filtrar productos por categoría
   useEffect(() => {
-    if (category === "all") {
-      setProducts(mockProducts);
-    } else {
-      setProducts(mockProducts.filter((p) => p.category === category));
+    async function load() {
+      const p = await getAllProducts();
+      setProducts(p);
+
+      const f = await getFeaturedProducts();
+      setFeatured(f);
     }
-  }, [category]);
+
+    load();
+  }, []);
+
+
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <HomeHeader 
+      <HomeHeader
         cartCount={cartCount}
         onCartPress={() => router.push("/(tabs)/cart")}
       />
@@ -35,7 +44,7 @@ export default function HomeScreen() {
       <FlatList
         ListHeaderComponent={
           <>
-            <FeaturedCarousel products={mockFeatured} />
+            <FeaturedCarousel products={featured} />
 
             <CategoryTabs
               selected={category}

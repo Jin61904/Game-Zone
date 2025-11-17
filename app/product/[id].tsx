@@ -1,5 +1,3 @@
-// app/product/[id].tsx
-
 import { ProductHeader } from "@/components/headers/ProductHeader";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,17 +6,24 @@ import React, { useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 // TEMP: datos fake hasta conectar firebase
-import { mockProducts } from "@/mock/products";
+import { getProductById } from "@/lib/products";
+
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [product, setProduct] = useState<any>(null);
 
   useEffect(() => {
-    // Luego aquí haremos llamada real a Firestore
-    const item = mockProducts.find((p) => p.id === id);
-    setProduct(item);
+    async function load() {
+      if (!id) return;
+
+      const p = await getProductById(id);
+      setProduct(p);
+    }
+
+    load();
   }, [id]);
+
 
   if (!product) {
     return (
@@ -40,7 +45,7 @@ export default function ProductDetail() {
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        
+
         {/* Imagen */}
         <View style={styles.imageWrapper}>
           {product.discount && (
