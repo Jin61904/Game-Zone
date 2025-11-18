@@ -1,3 +1,4 @@
+import { useCartCount } from "@/lib/cartStore";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,7 +9,6 @@ interface Props {
   onBack?: () => void;
   onFavoritePress?: () => void;
   isFavorite?: boolean;
-  cartCount?: number;
   onCartPress?: () => void;
 }
 
@@ -16,9 +16,10 @@ export const ProductHeader: React.FC<Props> = ({
   onBack,
   onFavoritePress,
   isFavorite = false,
-  cartCount = 0,
   onCartPress,
 }) => {
+  const { count } = useCartCount(); // ⭐ dinámico
+
   return (
     <LinearGradient colors={colors.gradient} style={styles.container}>
       <TouchableOpacity onPress={onBack} style={styles.back}>
@@ -40,9 +41,9 @@ export const ProductHeader: React.FC<Props> = ({
         <TouchableOpacity onPress={onCartPress} style={styles.cartBtn}>
           <Ionicons name="cart-outline" size={22} color="white" />
 
-          {cartCount > 0 && (
+          {count > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{cartCount}</Text>
+              <Text style={styles.badgeText}>{count}</Text>
             </View>
           )}
         </TouchableOpacity>

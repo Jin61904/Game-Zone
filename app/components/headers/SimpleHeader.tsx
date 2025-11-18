@@ -1,4 +1,4 @@
-// components/headers/SimpleHeader.tsx
+import { useCartCount } from "@/lib/cartStore";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -6,14 +6,12 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface Props {
-  cartCount?: number;
   onCartPress?: () => void;
 }
 
-export const SimpleHeader: React.FC<Props> = ({
-  cartCount = 0,
-  onCartPress,
-}) => {
+export const SimpleHeader: React.FC<Props> = ({ onCartPress }) => {
+  const { count } = useCartCount(); // ⭐ dinámico
+
   return (
     <LinearGradient colors={colors.gradient} style={styles.container}>
       <Text style={styles.logo}>GameZone</Text>
@@ -21,9 +19,9 @@ export const SimpleHeader: React.FC<Props> = ({
       <TouchableOpacity style={styles.cartBtn} onPress={onCartPress}>
         <Ionicons name="cart-outline" size={22} color="white" />
 
-        {cartCount > 0 && (
+        {count > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{cartCount}</Text>
+            <Text style={styles.badgeText}>{count}</Text>
           </View>
         )}
       </TouchableOpacity>

@@ -1,16 +1,27 @@
+import { useCartCount } from "@/lib/cartStore";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface Props {
-  cartCount?: number;
   onCartPress?: () => void;
   onFilterPress?: () => void;
 }
 
-export const HomeHeader: React.FC<Props> = ({ cartCount = 0, onCartPress, onFilterPress }) => {
+export const HomeHeader: React.FC<Props> = ({
+  onCartPress,
+  onFilterPress,
+}) => {
+  const { count } = useCartCount(); // ⭐ contador dinámico
+
   return (
     <LinearGradient colors={colors.gradient} style={styles.container}>
       {/* Top Row */}
@@ -24,9 +35,9 @@ export const HomeHeader: React.FC<Props> = ({ cartCount = 0, onCartPress, onFilt
 
           <TouchableOpacity style={styles.cartBtn} onPress={onCartPress}>
             <Ionicons name="cart-outline" size={22} color="white" />
-            {cartCount > 0 && (
+            {count > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{cartCount}</Text>
+                <Text style={styles.badgeText}>{count}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -35,7 +46,12 @@ export const HomeHeader: React.FC<Props> = ({ cartCount = 0, onCartPress, onFilt
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={18} color="white" style={{ marginRight: spacing.sm }} />
+        <Ionicons
+          name="search"
+          size={18}
+          color="white"
+          style={{ marginRight: spacing.sm }}
+        />
         <TextInput
           placeholder="Buscar consolas y juegos..."
           placeholderTextColor="rgba(255,255,255,0.7)"

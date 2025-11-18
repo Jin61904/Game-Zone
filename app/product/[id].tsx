@@ -16,12 +16,6 @@ import {
   View,
 } from "react-native";
 
-// Acción para agregar al carrito
-function onAdd(product) {
-  addToCart(product);
-  Alert.alert("Agregado al carrito", `${product.name} fue añadido`);
-}
-
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -35,9 +29,9 @@ export default function ProductDetail() {
       const p = await getProductById(id);
       setProduct(p);
 
-      // Cargar favorito real
-      const f = await isFavorite(id);
-      setFav(f);
+      // cargar si es favorito
+      const storedFav = await isFavorite(id);
+      setFav(storedFav);
     }
 
     load();
@@ -48,6 +42,11 @@ export default function ProductDetail() {
 
     await toggleFavorite(product);
     setFav(!fav);
+  }
+
+  function handleAdd(product) {
+    addToCart(product);
+    Alert.alert("Agregado al carrito", `${product.name} fue añadido`);
   }
 
   if (!product) {
@@ -62,7 +61,6 @@ export default function ProductDetail() {
     <View style={styles.container}>
       {/* Header */}
       <ProductHeader
-        cartCount={1}
         isFavorite={fav}
         onBack={() => router.back()}
         onCartPress={() => router.push("/tabs/cart")}
@@ -101,7 +99,7 @@ export default function ProductDetail() {
         {/* Nombre */}
         <Text style={styles.title}>{product.name}</Text>
 
-        {/* Precios */}
+        {/* Precio */}
         <View style={styles.priceRow}>
           <Text style={styles.price}>${product.price}</Text>
           <Text style={styles.oldPrice}>${product.oldPrice}</Text>
@@ -120,14 +118,13 @@ export default function ProductDetail() {
           </View>
         ))}
 
-        {/* Espacio final */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Botón inferior */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          onPress={() => onAdd(product)}
+          onPress={() => handleAdd(product)}
           style={styles.addButton}
         >
           <Text style={styles.addButtonText}>

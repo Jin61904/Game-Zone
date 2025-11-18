@@ -2,21 +2,18 @@ import { CategoryTabs } from "@/components/CategoryTabs";
 import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 import { HomeHeader } from "@/components/headers/HomeHeader";
 import { ProductCard } from "@/components/ProductCard";
+import { addToCart } from "@/lib/cart";
 import { getAllProducts, getFeaturedProducts } from "@/lib/products";
 import { colors, spacing } from "@/theme";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 
-
 export default function HomeScreen() {
   const [category, setCategory] = useState("all");
-  const [cartCount, setCartCount] = useState(1); // luego viene de firestore
   const [products, setProducts] = useState<any[]>([]);
   const [featured, setFeatured] = useState<any[]>([]);
 
-
-  // Filtrar productos por categoría
   useEffect(() => {
     async function load() {
       const p = await getAllProducts();
@@ -25,39 +22,12 @@ export default function HomeScreen() {
       const f = await getFeaturedProducts();
       setFeatured(f);
     }
-
     load();
   }, []);
 
-  function ProductFavorite({ item }) {
-    const [fav, setFav] = useState(false);
-
-    useEffect(() => {
-      isFavorite(item.id).then(setFav);
-    }, []);
-
-    async function toggle() {
-      const updated = await toggleFavorite(item);
-      setFav(!fav);
-    }
-
-    return (
-      <TouchableOpacity>
-        {/* ...producto... */}
-        <TouchableOpacity onPress={toggle}>
-          <Text style={{ fontSize: 25 }}>{fav ? "❤️" : "🤍"}</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <HomeHeader
-        cartCount={cartCount}
-        onCartPress={() => router.push("/tabs/cart")}
-      />
+      <HomeHeader onCartPress={() => router.push("/tabs/cart")} />
 
       <FlatList
         ListHeaderComponent={
@@ -86,7 +56,7 @@ export default function HomeScreen() {
             product={item}
             onPress={() => router.push(`/product/${item.id}`)}
             onFavorite={() => console.log("Favorito:", item.id)}
-            onAddToCart={() => console.log("Carrito:", item.id)}
+            onAddToCart={() => addToCart(item)}
           />
         )}
         showsVerticalScrollIndicator={false}
@@ -94,10 +64,6 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-
-
-
 
 const styles = StyleSheet.create({
   container: {

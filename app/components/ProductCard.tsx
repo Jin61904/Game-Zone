@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
 interface Props {
   product: any;
   onPress: () => void;
@@ -80,10 +79,17 @@ export const ProductCard: React.FC<Props> = ({
             )}
           </View>
 
-          {/* Botón Ver */}
-          <TouchableOpacity style={styles.button} onPress={onPress}>
-            <Text style={styles.buttonText}>Ver</Text>
-          </TouchableOpacity>
+          <View style={styles.actionsRow}>
+            {/* Botón Ver */}
+            <TouchableOpacity style={styles.verBtn} onPress={onPress}>
+              <Text style={styles.verBtnText}>Ver</Text>
+            </TouchableOpacity>
+
+            {/* Botón + */}
+            <TouchableOpacity style={styles.plusBtn} onPress={onAddToCart}>
+              <Ionicons name="add" size={20} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
@@ -153,13 +159,6 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
 
-  button: {
-    backgroundColor: colors.primaryLight,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-  },
-
   buttonText: {
     color: "white",
     fontWeight: fonts.semibold,
@@ -191,5 +190,34 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderRadius: radius.full,
     ...shadows.light,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm, // pequeño espacio
+  },
+
+  verBtn: {
+    backgroundColor: colors.primaryLight,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  verBtnText: {
+    color: "white",
+    fontWeight: fonts.semibold,
+    fontSize: fonts.body,
+  },
+
+  plusBtn: {
+    backgroundColor: colors.primaryLight,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
