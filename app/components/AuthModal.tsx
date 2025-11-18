@@ -14,6 +14,7 @@ import {
 
 import { useAuthModal } from "@/lib/authModalStore";
 import { useUser } from "@/lib/userStore";
+import { loginUser, registerUser } from "@/services/authService"; // ⭐ usar API real
 
 interface FormData {
   email: string;
@@ -70,8 +71,13 @@ export const AuthModal = () => {
 
     if (mode === "register") {
       if (!formData.username) newErrors.username = "El nombre de usuario es requerido";
+
+      if (!formData.confirmPassword)
+        newErrors.confirmPassword = "Confirma tu contraseña";
+
       if (formData.confirmPassword !== formData.password)
         newErrors.confirmPassword = "Las contraseñas no coinciden";
+
       if (!formData.acceptTerms)
         newErrors.acceptTerms = "Debes aceptar los términos";
     }
@@ -80,23 +86,50 @@ export const AuthModal = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  /**  ⭐⭐ AQUÍ CAMBIA TODO — AHORA USA EL SERVICIO REAL ⭐⭐ */
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    setTimeout(() => {
-      const username = formData.username || formData.email.split("@")[0];
+      let response;
 
-      setUser({
-        id: Math.random().toString(36).slice(2),
-        email: formData.email,
-        username,
+      if (mode === "login") {
+        response = await loginUser(formData.email, formData.password);
+      } else {
+        response = await registerUser(
+          formData.email,
+          formData.password,
+          formData.username,
+        );
+      }
+
+      // Guardar usuario globalmente
+      await setUser(response.user);
+
+      // Cerrar modal
+      close();
+
+      // Limpiar formulario
+      setFormData({
+        email: '',
+        password: '',
+        confirmPassword: '',
+        username: '',
+        acceptTerms: false,
       });
 
+    } catch (error: any) {
+      console.log("❌ Error Auth:", error.message);
+
+      setErrors({
+        email: "Error: " + (error.message || "Inténtalo de nuevo"),
+      });
+
+    } finally {
       setLoading(false);
-      close();
-    }, 1200);
+    }
   };
 
   return (
@@ -180,6 +213,7 @@ export const AuthModal = () => {
                     onChangeText={text => handleChange("email", text)}
                   />
                 </View>
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
               </View>
 
               {/* PASSWORD */}
@@ -211,6 +245,7 @@ export const AuthModal = () => {
                     />
                   </TouchableOpacity>
                 </View>
+                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
               </View>
 
               {/* CONFIRM PASSWORD */}
@@ -243,7 +278,35 @@ export const AuthModal = () => {
                       />
                     </TouchableOpacity>
                   </View>
+                  {errors.confirmPassword && (
+                    <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                  )}
                 </View>
+              )}
+
+              {/* TERMS */}
+              {mode === "register" && (
+                <View style={styles.termsRow}>
+                  <TouchableOpacity
+                    style={styles.checkbox}
+                    onPress={() =>
+                      handleChange("acceptTerms", !formData.acceptTerms)
+                    }
+                  >
+                    {formData.acceptTerms && (
+                      <View style={styles.checkboxInner} />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.termsText}>
+                    Acepto los <Text style={styles.termsLink}>términos y condiciones</Text> y la{" "}
+                    <Text style={styles.termsLink}>política de privacidad</Text>.
+                  </Text>
+                </View>
+              )}
+              {errors.acceptTerms && (
+                <Text style={[styles.errorText, { marginTop: 4 }]}>
+                  {errors.acceptTerms}
+                </Text>
               )}
 
               {/* SUBMIT */}
@@ -276,9 +339,7 @@ export const AuthModal = () => {
   );
 };
 
-// (Se mantienen todos tus estilos)
-
-
+/* ⭐⭐ Tus estilos completos tal como los tenías ⭐⭐ */
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   overlay: {
@@ -333,9 +394,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  field: {
-    marginTop: 12,
-  },
+  field: { marginTop: 12 },
   label: {
     fontSize: 13,
     marginBottom: 4,
@@ -351,9 +410,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  inputIcon: {
-    marginRight: 4,
-  },
+  inputIcon: { marginRight: 4 },
   input: {
     flex: 1,
     fontSize: 14,
@@ -411,13 +468,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '600',
-  },
-  linkCenter: {
-    marginTop: 8,
-    alignItems: 'center',
-  },
-  forgotText: {
-    fontSize: 13,
-    color: '#7C3AED',
   },
 });

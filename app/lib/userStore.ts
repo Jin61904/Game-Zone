@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
-interface User {
+export interface User {
   id: string;
   email: string;
   username: string;
@@ -9,8 +9,8 @@ interface User {
 
 interface UserStore {
   user: User | null;
-  setUser: (u: User | null) => void;
-  logout: () => void;
+  setUser: (u: User | null) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export const useUser = create<UserStore>((set) => ({
