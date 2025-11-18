@@ -76,6 +76,31 @@ export default function HomeScreen() {
   );
 }
 
+import { isFavorite, toggleFavorite } from "@/lib/favorites";
+
+function ProductFavorite({ item }) {
+  const [fav, setFav] = useState(false);
+
+  useEffect(() => {
+    isFavorite(item.id).then(setFav);
+  }, []);
+
+  async function toggle() {
+    const updated = await toggleFavorite(item);
+    setFav(!fav);
+  }
+
+  return (
+    <TouchableOpacity>
+      {/* ...producto... */}
+      <TouchableOpacity onPress={toggle}>
+        <Text style={{ fontSize: 25 }}>{fav ? "❤️" : "🤍"}</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
