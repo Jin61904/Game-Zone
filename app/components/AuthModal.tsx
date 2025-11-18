@@ -1,24 +1,19 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import type { User } from '../index';
 
-interface AuthModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  mode: 'login' | 'register';
-  onSuccess: (user: User) => void;
-}
+import { useAuthModal } from "@/lib/authModalStore";
+import { useUser } from "@/lib/userStore";
 
 interface FormData {
   email: string;
@@ -36,12 +31,10 @@ interface FormErrors {
   acceptTerms?: string;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({
-  isOpen,
-  onClose,
-  mode,
-  onSuccess,
-}) => {
+export const AuthModal = () => {
+  const { isOpen, mode, close } = useAuthModal();
+  const { setUser } = useUser();
+
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -49,12 +42,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     username: '',
     acceptTerms: false,
   });
+
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleChange = (field: keyof FormData, value: string | boolean) => {
+  if (!isOpen) return null;
+
+  const handleChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -64,34 +60,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = 'El email es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email inválido';
-    }
+    if (!formData.email) newErrors.email = "El email es requerido";
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
+      newErrors.email = "Email inválido";
 
-    if (!formData.password) {
-      newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Mínimo 6 caracteres';
-    }
+    if (!formData.password) newErrors.password = "La contraseña es requerida";
+    else if (formData.password.length < 6)
+      newErrors.password = "Mínimo 6 caracteres";
 
-    if (mode === 'register') {
-      if (!formData.username) {
-        newErrors.username = 'El nombre de usuario es requerido';
-      } else if (formData.username.length < 3) {
-        newErrors.username = 'Mínimo 3 caracteres';
-      }
-
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Confirma tu contraseña';
-      } else if (formData.confirmPassword !== formData.password) {
-        newErrors.confirmPassword = 'Las contraseñas no coinciden';
-      }
-
-      if (!formData.acceptTerms) {
-        newErrors.acceptTerms = 'Debes aceptar los términos';
-      }
+    if (mode === "register") {
+      if (!formData.username) newErrors.username = "El nombre de usuario es requerido";
+      if (formData.confirmPassword !== formData.password)
+        newErrors.confirmPassword = "Las contraseñas no coinciden";
+      if (!formData.acceptTerms)
+        newErrors.acceptTerms = "Debes aceptar los términos";
     }
 
     setErrors(newErrors);
@@ -100,77 +82,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleSubmit = () => {
     if (!validateForm()) return;
+
     setLoading(true);
 
     setTimeout(() => {
-      const username =
-        formData.username || formData.email.split('@')[0];
+      const username = formData.username || formData.email.split("@")[0];
 
-      const userData: User = {
+      setUser({
         id: Math.random().toString(36).slice(2),
         email: formData.email,
         username,
-      };
-
-      onSuccess(userData);
-      setLoading(false);
-      setFormData({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        username: '',
-        acceptTerms: false,
       });
+
+      setLoading(false);
+      close();
     }, 1200);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <Modal
-      visible={isOpen}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible animationType="slide" transparent onRequestClose={close}>
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.flex}
         >
           <View style={styles.card}>
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                <MaterialCommunityIcons name="close" size={20} color="#6B7280" />
-              </TouchableOpacity>
-
-              <View style={styles.headerIconWrapper}>
-                <View style={styles.headerIconCircle}>
-                  <MaterialCommunityIcons
-                    name="gamepad-variant"
-                    size={28}
-                    color="#FFFFFF"
-                  />
-                </View>
-              </View>
-
-              <Text style={styles.headerTitle}>
-                {mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta Gamer'}
-              </Text>
-              <Text style={styles.headerSubtitle}>
-                {mode === 'login'
-                  ? 'Accede a tu cuenta para disfrutar ofertas exclusivas'
-                  : 'Únete a la comunidad gaming más grande'}
-              </Text>
-            </View>
-
-            {/* Formulario */}
             <ScrollView
               contentContainerStyle={styles.formContainer}
               keyboardShouldPersistTaps="handled"
             >
-              {mode === 'register' && (
+              {/* HEADER */}
+              <View style={styles.header}>
+                <TouchableOpacity style={styles.closeBtn} onPress={close}>
+                  <MaterialCommunityIcons name="close" size={20} color="#6B7280" />
+                </TouchableOpacity>
+
+                <View style={styles.headerIconWrapper}>
+                  <View style={styles.headerIconCircle}>
+                    <MaterialCommunityIcons
+                      name="gamepad-variant"
+                      size={28}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.headerTitle}>
+                  {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta Gamer"}
+                </Text>
+
+                <Text style={styles.headerSubtitle}>
+                  {mode === "login"
+                    ? "Accede a tu cuenta para ofertas exclusivas"
+                    : "Únete a la comunidad gaming"}
+                </Text>
+              </View>
+
+              {/* USERNAME */}
+              {mode === "register" && (
                 <View style={styles.field}>
                   <Text style={styles.label}>Nombre de usuario</Text>
                   <View style={styles.inputRow}>
@@ -185,15 +154,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       placeholder="Tu nombre gamer"
                       placeholderTextColor="#9CA3AF"
                       value={formData.username}
-                      onChangeText={text => handleChange('username', text)}
+                      onChangeText={text => handleChange("username", text)}
                     />
                   </View>
-                  {errors.username && (
-                    <Text style={styles.errorText}>{errors.username}</Text>
-                  )}
                 </View>
               )}
 
+              {/* EMAIL */}
               <View style={styles.field}>
                 <Text style={styles.label}>Email</Text>
                 <View style={styles.inputRow}>
@@ -207,17 +174,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={styles.input}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    placeholder="tu@email.com"
+                    placeholder="tucorreo@email.com"
                     placeholderTextColor="#9CA3AF"
                     value={formData.email}
-                    onChangeText={text => handleChange('email', text)}
+                    onChangeText={text => handleChange("email", text)}
                   />
                 </View>
-                {errors.email && (
-                  <Text style={styles.errorText}>{errors.email}</Text>
-                )}
               </View>
 
+              {/* PASSWORD */}
               <View style={styles.field}>
                 <Text style={styles.label}>Contraseña</Text>
                 <View style={styles.inputRow}>
@@ -233,25 +198,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     placeholder="Tu contraseña"
                     placeholderTextColor="#9CA3AF"
                     value={formData.password}
-                    onChangeText={text => handleChange('password', text)}
+                    onChangeText={text => handleChange("password", text)}
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(prev => !prev)}
                     style={styles.eyeBtn}
                   >
                     <MaterialCommunityIcons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
                       size={18}
                       color="#9CA3AF"
                     />
                   </TouchableOpacity>
                 </View>
-                {errors.password && (
-                  <Text style={styles.errorText}>{errors.password}</Text>
-                )}
               </View>
 
-              {mode === 'register' && (
+              {/* CONFIRM PASSWORD */}
+              {mode === "register" && (
                 <View style={styles.field}>
                   <Text style={styles.label}>Confirmar contraseña</Text>
                   <View style={styles.inputRow}>
@@ -267,55 +230,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       placeholder="Confirma tu contraseña"
                       placeholderTextColor="#9CA3AF"
                       value={formData.confirmPassword}
-                      onChangeText={text =>
-                        handleChange('confirmPassword', text)
-                      }
+                      onChangeText={text => handleChange("confirmPassword", text)}
                     />
                     <TouchableOpacity
                       onPress={() => setShowConfirm(prev => !prev)}
                       style={styles.eyeBtn}
                     >
                       <MaterialCommunityIcons
-                        name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                        name={showConfirm ? "eye-off-outline" : "eye-outline"}
                         size={18}
                         color="#9CA3AF"
                       />
                     </TouchableOpacity>
                   </View>
-                  {errors.confirmPassword && (
-                    <Text style={styles.errorText}>
-                      {errors.confirmPassword}
-                    </Text>
-                  )}
                 </View>
               )}
 
-              {mode === 'register' && (
-                <View style={styles.termsRow}>
-                  <TouchableOpacity
-                    style={styles.checkbox}
-                    onPress={() =>
-                      handleChange('acceptTerms', !formData.acceptTerms)
-                    }
-                  >
-                    {formData.acceptTerms && (
-                      <View style={styles.checkboxInner} />
-                    )}
-                  </TouchableOpacity>
-                  <Text style={styles.termsText}>
-                    Acepto los{' '}
-                    <Text style={styles.termsLink}>términos y condiciones</Text>{' '}
-                    y la{' '}
-                    <Text style={styles.termsLink}>política de privacidad</Text>.
-                  </Text>
-                </View>
-              )}
-              {errors.acceptTerms && (
-                <Text style={[styles.errorText, { marginTop: 4 }]}>
-                  {errors.acceptTerms}
-                </Text>
-              )}
-
+              {/* SUBMIT */}
               <TouchableOpacity
                 style={styles.submitBtn}
                 onPress={handleSubmit}
@@ -332,19 +263,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       style={{ marginRight: 6 }}
                     />
                     <Text style={styles.submitText}>
-                      {mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
+                      {mode === "login" ? "Iniciar Sesión" : "Crear Cuenta"}
                     </Text>
                   </>
                 )}
               </TouchableOpacity>
-
-              {mode === 'login' && (
-                <TouchableOpacity style={styles.linkCenter}>
-                  <Text style={styles.forgotText}>
-                    ¿Olvidaste tu contraseña?
-                  </Text>
-                </TouchableOpacity>
-              )}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -352,6 +275,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     </Modal>
   );
 };
+
+// (Se mantienen todos tus estilos)
+
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
