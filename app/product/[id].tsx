@@ -1,13 +1,17 @@
 import { ProductHeader } from "@/components/headers/ProductHeader";
+import { addToCart } from "@/lib/cart";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 // TEMP: datos fake hasta conectar firebase
 import { getProductById } from "@/lib/products";
 
+function onAdd(product) {
+  addToCart(product);
+  Alert.alert("Agregado al carrito", `${product.name} fue añadido`);
+}
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,7 +44,7 @@ export default function ProductDetail() {
         cartCount={1}
         isFavorite={product.isFavorite}
         onBack={() => router.back()}
-        onCartPress={() => router.push("/(tabs)/cart")}
+        onCartPress={() => router.push("/tabs/cart")}
         onFavoritePress={() => console.log("agregar favorito")}
       />
 
@@ -99,7 +103,7 @@ export default function ProductDetail() {
 
       {/* Botón inferior fijo */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity onPress={()=>onAdd(product)} style={styles.addButton}>
           <Text style={styles.addButtonText}>
             + Agregar al Carrito – ${product.price}
           </Text>

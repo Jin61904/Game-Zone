@@ -6,7 +6,6 @@ import { colors, spacing } from "@/theme";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-
 // TEMPORAL: Datos mock hasta conectar Firebase
 import { getAllProducts, getFeaturedProducts } from "@/lib/products";
 
@@ -38,7 +37,7 @@ export default function HomeScreen() {
       {/* Header */}
       <HomeHeader
         cartCount={cartCount}
-        onCartPress={() => router.push("/(tabs)/cart")}
+        onCartPress={() => router.push("/tabs/cart")}
       />
 
       <FlatList
