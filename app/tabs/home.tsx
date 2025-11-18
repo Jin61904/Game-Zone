@@ -14,6 +14,7 @@ export default function HomeScreen() {
   const [products, setProducts] = useState<any[]>([]);
   const [featured, setFeatured] = useState<any[]>([]);
 
+  // cargar productos
   useEffect(() => {
     async function load() {
       const p = await getAllProducts();
@@ -56,7 +57,7 @@ export default function HomeScreen() {
             product={item}
             onPress={() => router.push(`/product/${item.id}`)}
             onFavorite={() => console.log("Favorito:", item.id)}
-            onAddToCart={() => addToCart(item)}
+            onAddToCart={() => addToCart(item)} // ⭐ ahora funcional
           />
         )}
         showsVerticalScrollIndicator={false}
