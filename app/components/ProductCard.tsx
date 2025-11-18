@@ -1,12 +1,19 @@
+import { isFavorite, toggleFavorite } from "@/lib/favorites";
 import { colors, fonts, radius, shadows, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 interface Props {
   product: any;
   onPress: () => void;
-  onFavorite: () => void;
+  onFavorite?: () => void; // opcional, pero lo mantengo
   onAddToCart: () => void;
 }
 
@@ -16,6 +23,20 @@ export const ProductCard: React.FC<Props> = ({
   onFavorite,
   onAddToCart,
 }) => {
+  const [fav, setFav] = useState(false);
+
+  // Saber si es favorito al montar la tarjeta
+  useEffect(() => {
+    isFavorite(product.id).then(setFav);
+  }, [product.id]);
+
+  // Alternar favoritos
+  async function handleFavorite() {
+    await toggleFavorite(product);
+    setFav(!fav);
+    onFavorite && onFavorite(); // por si quieres usarlo arriba
+  }
+
   return (
     <View style={styles.card}>
       {/* Descuento */}
@@ -26,8 +47,12 @@ export const ProductCard: React.FC<Props> = ({
       )}
 
       {/* Favorito */}
-      <TouchableOpacity style={styles.favorite} onPress={onFavorite}>
-        <Ionicons name="heart-outline" size={20} color={colors.primary} />
+      <TouchableOpacity style={styles.favorite} onPress={handleFavorite}>
+        <Ionicons
+          name={fav ? "heart" : "heart-outline"}
+          size={20}
+          color={fav ? colors.primaryDark : colors.primary}
+        />
       </TouchableOpacity>
 
       {/* Imagen */}
@@ -55,6 +80,7 @@ export const ProductCard: React.FC<Props> = ({
             )}
           </View>
 
+          {/* Botón Ver */}
           <TouchableOpacity style={styles.button} onPress={onPress}>
             <Text style={styles.buttonText}>Ver</Text>
           </TouchableOpacity>

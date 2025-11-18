@@ -1,13 +1,22 @@
 import { ProductHeader } from "@/components/headers/ProductHeader";
 import { addToCart } from "@/lib/cart";
+import { isFavorite, toggleFavorite } from "@/lib/favorites";
+import { getProductById } from "@/lib/products";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-// TEMP: datos fake hasta conectar firebase
-import { getProductById } from "@/lib/products";
+import {
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
+// Acción para agregar al carrito
 function onAdd(product) {
   addToCart(product);
   Alert.alert("Agregado al carrito", `${product.name} fue añadido`);
@@ -15,7 +24,9 @@ function onAdd(product) {
 
 export default function ProductDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+
   const [product, setProduct] = useState<any>(null);
+  const [fav, setFav] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -23,11 +34,21 @@ export default function ProductDetail() {
 
       const p = await getProductById(id);
       setProduct(p);
+
+      // Cargar favorito real
+      const f = await isFavorite(id);
+      setFav(f);
     }
 
     load();
   }, [id]);
 
+  async function handleToggleFavorite() {
+    if (!product) return;
+
+    await toggleFavorite(product);
+    setFav(!fav);
+  }
 
   if (!product) {
     return (
@@ -42,14 +63,16 @@ export default function ProductDetail() {
       {/* Header */}
       <ProductHeader
         cartCount={1}
-        isFavorite={product.isFavorite}
+        isFavorite={fav}
         onBack={() => router.back()}
         onCartPress={() => router.push("/tabs/cart")}
-        onFavoritePress={() => console.log("agregar favorito")}
+        onFavoritePress={handleToggleFavorite}
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
         {/* Imagen */}
         <View style={styles.imageWrapper}>
           {product.discount && (
@@ -90,7 +113,7 @@ export default function ProductDetail() {
         {/* Características */}
         <Text style={styles.featuresTitle}>Características principales:</Text>
 
-        {product.features.map((f: string, i: number) => (
+        {product.features?.map((f: string, i: number) => (
           <View style={styles.featureRow} key={i}>
             <Ionicons name="checkmark" size={18} color={colors.success} />
             <Text style={styles.featureText}>{f}</Text>
@@ -101,44 +124,41 @@ export default function ProductDetail() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Botón inferior fijo */}
+      {/* Botón inferior */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={()=>onAdd(product)} style={styles.addButton}>
+        <TouchableOpacity
+          onPress={() => onAdd(product)}
+          style={styles.addButton}
+        >
           <Text style={styles.addButtonText}>
             + Agregar al Carrito – ${product.price}
           </Text>
         </TouchableOpacity>
       </View>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-
   scroll: {
     padding: spacing.lg,
     paddingBottom: 160,
   },
-
   imageWrapper: {
     position: "relative",
     borderRadius: radius.lg,
     overflow: "hidden",
     marginBottom: spacing.lg,
   },
-
   discount: {
     position: "absolute",
     zIndex: 10,
@@ -149,101 +169,85 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: radius.sm,
   },
-
   discountText: {
     color: "white",
     fontSize: fonts.bodySmall,
     fontWeight: fonts.semibold,
   },
-
   image: {
     width: "100%",
     height: 250,
     resizeMode: "cover",
   },
-
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
     marginBottom: spacing.sm,
   },
-
   categoryBadge: {
     backgroundColor: colors.primary,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: radius.sm,
   },
-
   categoryText: {
     color: "white",
     fontSize: fonts.bodySmall,
     fontWeight: fonts.semibold,
   },
-
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
   },
-
   ratingText: {
     color: colors.textSecondary,
     fontSize: fonts.bodySmall,
   },
-
   title: {
     fontSize: fonts.title2,
     fontWeight: fonts.bold,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
-
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
     marginBottom: spacing.md,
   },
-
   price: {
     fontSize: fonts.title2,
     fontWeight: fonts.bold,
     color: colors.primaryDark,
   },
-
   oldPrice: {
     fontSize: fonts.subtitle,
     color: colors.textSecondary,
     textDecorationLine: "line-through",
   },
-
   description: {
     fontSize: fonts.body,
     color: colors.textSecondary,
     marginBottom: spacing.lg,
   },
-
   featuresTitle: {
     fontSize: fonts.subtitle,
     color: colors.textPrimary,
     fontWeight: fonts.semibold,
     marginBottom: spacing.md,
   },
-
   featureRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-
   featureText: {
     fontSize: fonts.body,
     color: colors.textPrimary,
   },
-
   bottomBar: {
     position: "absolute",
     bottom: 0,
@@ -254,13 +258,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.border,
   },
-
   addButton: {
     backgroundColor: colors.primaryDark,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
   },
-
   addButtonText: {
     color: "white",
     textAlign: "center",

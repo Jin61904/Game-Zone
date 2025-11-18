@@ -2,12 +2,11 @@ import { CategoryTabs } from "@/components/CategoryTabs";
 import { FeaturedCarousel } from "@/components/FeaturedCarousel";
 import { HomeHeader } from "@/components/headers/HomeHeader";
 import { ProductCard } from "@/components/ProductCard";
+import { getAllProducts, getFeaturedProducts } from "@/lib/products";
 import { colors, spacing } from "@/theme";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-// TEMPORAL: Datos mock hasta conectar Firebase
-import { getAllProducts, getFeaturedProducts } from "@/lib/products";
 
 
 export default function HomeScreen() {
@@ -30,7 +29,27 @@ export default function HomeScreen() {
     load();
   }, []);
 
+  function ProductFavorite({ item }) {
+    const [fav, setFav] = useState(false);
 
+    useEffect(() => {
+      isFavorite(item.id).then(setFav);
+    }, []);
+
+    async function toggle() {
+      const updated = await toggleFavorite(item);
+      setFav(!fav);
+    }
+
+    return (
+      <TouchableOpacity>
+        {/* ...producto... */}
+        <TouchableOpacity onPress={toggle}>
+          <Text style={{ fontSize: 25 }}>{fav ? "❤️" : "🤍"}</Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -76,29 +95,8 @@ export default function HomeScreen() {
   );
 }
 
-import { isFavorite, toggleFavorite } from "@/lib/favorites";
 
-function ProductFavorite({ item }) {
-  const [fav, setFav] = useState(false);
 
-  useEffect(() => {
-    isFavorite(item.id).then(setFav);
-  }, []);
-
-  async function toggle() {
-    const updated = await toggleFavorite(item);
-    setFav(!fav);
-  }
-
-  return (
-    <TouchableOpacity>
-      {/* ...producto... */}
-      <TouchableOpacity onPress={toggle}>
-        <Text style={{ fontSize: 25 }}>{fav ? "❤️" : "🤍"}</Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-}
 
 
 const styles = StyleSheet.create({
