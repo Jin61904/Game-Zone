@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -14,7 +14,7 @@ import {
 
 import { useAuthModal } from "@/lib/authModalStore";
 import { useUser } from "@/lib/userStore";
-import { loginUser, registerUser } from "@/services/authService"; // ⭐ usar API real
+import { loginUser, registerUser } from "@/services/authService";
 
 interface FormData {
   email: string;
