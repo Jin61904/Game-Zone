@@ -14,6 +14,7 @@ import {
 
 import { useAuthModal } from "@/lib/authModalStore";
 import { useUser } from "@/lib/userStore";
+
 import { loginUser, registerUser } from "@/services/authService";
 
 interface FormData {
@@ -23,7 +24,6 @@ interface FormData {
   username: string;
   acceptTerms: boolean;
 }
-
 interface FormErrors {
   email?: string;
   password?: string;
@@ -53,9 +53,7 @@ export const AuthModal = () => {
 
   const handleChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
   };
 
   const validateForm = (): boolean => {
@@ -72,9 +70,6 @@ export const AuthModal = () => {
     if (mode === "register") {
       if (!formData.username) newErrors.username = "El nombre de usuario es requerido";
 
-      if (!formData.confirmPassword)
-        newErrors.confirmPassword = "Confirma tu contraseña";
-
       if (formData.confirmPassword !== formData.password)
         newErrors.confirmPassword = "Las contraseñas no coinciden";
 
@@ -86,47 +81,59 @@ export const AuthModal = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  /**  ⭐⭐ AQUÍ CAMBIA TODO — AHORA USA EL SERVICIO REAL ⭐⭐ */
+  
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
     try {
       setLoading(true);
 
-      let response;
+      let res;
 
       if (mode === "login") {
-        response = await loginUser(formData.email, formData.password);
+        res = await loginUser(formData.email, formData.password);
       } else {
-        response = await registerUser(
+        res = await registerUser(
           formData.email,
           formData.password,
-          formData.username,
+          formData.username
         );
       }
 
-      // Guardar usuario globalmente
-      await setUser(response.user);
+      await setUser(res.user);
 
-      // Cerrar modal
       close();
 
-      // Limpiar formulario
       setFormData({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        username: '',
+        email: "",
+        password: "",
+        confirmPassword: "",
+        username: "",
         acceptTerms: false,
       });
 
     } catch (error: any) {
-      console.log("❌ Error Auth:", error.message);
+      console.log("❌ Firebase error:", error);
 
-      setErrors({
-        email: "Error: " + (error.message || "Inténtalo de nuevo"),
-      });
+      let friendly = "Ocurrió un error. Intenta de nuevo.";
 
+      if (error.code === "auth/email-already-in-use") {
+        friendly = "Este correo ya está registrado.";
+      }
+      if (error.code === "auth/invalid-email") {
+        friendly = "Correo inválido.";
+      }
+      if( error.code === "auth/invalid-credential"){
+        friendly = "Credenciales inválidas.";
+      }
+      if (error.code === "auth/wrong-password") {
+        friendly = "Contraseña incorrecta.";
+      }
+      if (error.code === "auth/user-not-found") {
+        friendly = "No existe un usuario con este email.";
+      }
+
+      setErrors({ email: friendly });
     } finally {
       setLoading(false);
     }
@@ -171,7 +178,8 @@ export const AuthModal = () => {
                 </Text>
               </View>
 
-              {/* USERNAME */}
+              {/* CONTENIDO */}
+              {/* Username */}
               {mode === "register" && (
                 <View style={styles.field}>
                   <Text style={styles.label}>Nombre de usuario</Text>
@@ -187,13 +195,14 @@ export const AuthModal = () => {
                       placeholder="Tu nombre gamer"
                       placeholderTextColor="#9CA3AF"
                       value={formData.username}
-                      onChangeText={text => handleChange("username", text)}
+                      onChangeText={(t) => handleChange("username", t)}
                     />
                   </View>
+                  {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
                 </View>
               )}
 
-              {/* EMAIL */}
+              {/* Email */}
               <View style={styles.field}>
                 <Text style={styles.label}>Email</Text>
                 <View style={styles.inputRow}>
@@ -210,13 +219,13 @@ export const AuthModal = () => {
                     placeholder="tucorreo@email.com"
                     placeholderTextColor="#9CA3AF"
                     value={formData.email}
-                    onChangeText={text => handleChange("email", text)}
+                    onChangeText={(t) => handleChange("email", t)}
                   />
                 </View>
                 {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
               </View>
 
-              {/* PASSWORD */}
+              {/* Password */}
               <View style={styles.field}>
                 <Text style={styles.label}>Contraseña</Text>
                 <View style={styles.inputRow}>
@@ -232,10 +241,10 @@ export const AuthModal = () => {
                     placeholder="Tu contraseña"
                     placeholderTextColor="#9CA3AF"
                     value={formData.password}
-                    onChangeText={text => handleChange("password", text)}
+                    onChangeText={(t) => handleChange("password", t)}
                   />
                   <TouchableOpacity
-                    onPress={() => setShowPassword(prev => !prev)}
+                    onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeBtn}
                   >
                     <MaterialCommunityIcons
@@ -248,7 +257,7 @@ export const AuthModal = () => {
                 {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
               </View>
 
-              {/* CONFIRM PASSWORD */}
+              {/* Confirm password */}
               {mode === "register" && (
                 <View style={styles.field}>
                   <Text style={styles.label}>Confirmar contraseña</Text>
@@ -265,10 +274,10 @@ export const AuthModal = () => {
                       placeholder="Confirma tu contraseña"
                       placeholderTextColor="#9CA3AF"
                       value={formData.confirmPassword}
-                      onChangeText={text => handleChange("confirmPassword", text)}
+                      onChangeText={(t) => handleChange("confirmPassword", t)}
                     />
                     <TouchableOpacity
-                      onPress={() => setShowConfirm(prev => !prev)}
+                      onPress={() => setShowConfirm(!showConfirm)}
                       style={styles.eyeBtn}
                     >
                       <MaterialCommunityIcons
@@ -284,37 +293,25 @@ export const AuthModal = () => {
                 </View>
               )}
 
-              {/* TERMS */}
+              {/* Terms */}
               {mode === "register" && (
                 <View style={styles.termsRow}>
                   <TouchableOpacity
                     style={styles.checkbox}
-                    onPress={() =>
-                      handleChange("acceptTerms", !formData.acceptTerms)
-                    }
+                    onPress={() => handleChange("acceptTerms", !formData.acceptTerms)}
                   >
-                    {formData.acceptTerms && (
-                      <View style={styles.checkboxInner} />
-                    )}
+                    {formData.acceptTerms && <View style={styles.checkboxInner} />}
                   </TouchableOpacity>
                   <Text style={styles.termsText}>
-                    Acepto los <Text style={styles.termsLink}>términos y condiciones</Text> y la{" "}
+                    Acepto los{" "}
+                    <Text style={styles.termsLink}>términos y condiciones</Text> y la{" "}
                     <Text style={styles.termsLink}>política de privacidad</Text>.
                   </Text>
                 </View>
               )}
-              {errors.acceptTerms && (
-                <Text style={[styles.errorText, { marginTop: 4 }]}>
-                  {errors.acceptTerms}
-                </Text>
-              )}
 
               {/* SUBMIT */}
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
+              <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
                 {loading ? (
                   <Text style={styles.submitText}>Cargando...</Text>
                 ) : (
@@ -322,7 +319,7 @@ export const AuthModal = () => {
                     <MaterialCommunityIcons
                       name="gamepad-variant"
                       size={18}
-                      color="#FFFFFF"
+                      color="#FFF"
                       style={{ marginRight: 6 }}
                     />
                     <Text style={styles.submitText}>
@@ -339,7 +336,7 @@ export const AuthModal = () => {
   );
 };
 
-/* ⭐⭐ Tus estilos completos tal como los tenías ⭐⭐ */
+/* ⬇ TUS ESTILOS ORIGINALES SIN CAMBIOS ⬇ */
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   overlay: {
@@ -394,7 +391,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  field: { marginTop: 12 },
+  field: {
+    marginTop: 12,
+  },
   label: {
     fontSize: 13,
     marginBottom: 4,
@@ -410,7 +409,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 44,
   },
-  inputIcon: { marginRight: 4 },
+  inputIcon: {
+    marginRight: 4,
+  },
   input: {
     flex: 1,
     fontSize: 14,
