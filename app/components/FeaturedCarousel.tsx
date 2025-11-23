@@ -1,4 +1,5 @@
 import { colors, fonts, radius, spacing } from "@/theme";
+import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import { Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -41,8 +42,8 @@ export const FeaturedCarousel: React.FC<Props> = ({ products }) => {
               <View style={styles.row}>
                 <Text style={styles.price}>${item.price}</Text>
 
-                <TouchableOpacity style={styles.button}>
-                  <Text style={styles.buttonText}>Ver Detalles</Text>
+                <TouchableOpacity style={styles.button} >
+                  <Text onPress={() => router.push(`/product/${item.id}`)} style={styles.buttonText}>Ver Detalles</Text>
                 </TouchableOpacity>
               </View>
             </View>
