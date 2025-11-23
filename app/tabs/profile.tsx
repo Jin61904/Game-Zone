@@ -19,7 +19,7 @@ export default function ProfileScreen() {
   const { user, logout } = useUser();
   const { open } = useAuthModal();
 
-  // EXTRAER SOLO EL NÚMERO DEL STORE
+  // Solo número del carrito
   const { count: cartCount } = useCartCount();
 
   const [favCount, setFavCount] = useState(0);
@@ -66,13 +66,11 @@ function NotLoggedView({ open }) {
           Únete a la comunidad gaming y disfruta de ofertas exclusivas
         </Text>
 
-        {/* BOTÓN LOGIN */}
         <TouchableOpacity style={styles.primaryButton} onPress={() => open("login")}>
           <Ionicons name="log-in-outline" size={18} color="white" />
           <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
         </TouchableOpacity>
 
-        {/* CREAR CUENTA */}
         <TouchableOpacity style={styles.secondaryButton} onPress={() => open("register")}>
           <Text style={styles.secondaryButtonText}>Crear Cuenta Gamer</Text>
         </TouchableOpacity>
@@ -138,7 +136,11 @@ function LoggedView({ user, cartCount, favCount, onLogout }) {
         </View>
 
         {/* Options */}
-        <ProfileButton icon="settings-outline" label="Configuración de Cuenta" onPress={() => { }} />
+        <ProfileButton
+          icon="settings-outline"
+          label="Configuración de Cuenta"
+          onPress={() => {}}
+        />
 
         <ProfileButton
           icon="heart-outline"
@@ -146,16 +148,25 @@ function LoggedView({ user, cartCount, favCount, onLogout }) {
           onPress={() => router.push("/favorites")}
         />
 
-        <ProfileButton icon="cart-outline" label="Historial de Compras" onPress={() => { }} />
+        <ProfileButton
+          icon="cart-outline"
+          label="Historial de Compras"
+          onPress={() => router.push("/orders")}
+        />
 
-        <ProfileButton icon="log-out-outline" label="Cerrar Sesión" danger onPress={onLogout} />
+        <ProfileButton
+          icon="log-out-outline"
+          label="Cerrar Sesión"
+          danger
+          onPress={onLogout}
+        />
       </View>
     </ScrollView>
   );
 }
 
 /* -------------------------
-    COMPONENTE REUTILIZABLE
+    REUSABLE BUTTON
 --------------------------- */
 function ProfileButton({ icon, label, danger, onPress }) {
   return (
@@ -168,7 +179,9 @@ function ProfileButton({ icon, label, danger, onPress }) {
         size={20}
         color={danger ? colors.danger : colors.primaryDark}
       />
-      <Text style={[styles.optionText, danger && styles.optionTextDanger]}>{label}</Text>
+      <Text style={[styles.optionText, danger && styles.optionTextDanger]}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -178,6 +191,7 @@ function ProfileButton({ icon, label, danger, onPress }) {
 --------------------------- */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+
   card: {
     backgroundColor: "white",
     marginHorizontal: spacing.lg,
@@ -185,6 +199,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     marginTop: spacing.lg,
   },
+
   notLoggedContainer: { paddingBottom: 120 },
   loggedContainer: { paddingBottom: 120 },
 

@@ -1,20 +1,24 @@
 import { SimpleHeader } from "@/components/headers/SimpleHeader";
-import { getCart, removeFromCart, updateQuantity } from "@/lib/cart";
+import { clearCart, getCart, removeFromCart, updateQuantity } from "@/lib/cart";
+import { useUser } from "@/lib/userStore";
+import { saveOrder } from "@/services/orderService";
 import { colors, radius, spacing } from "@/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function CartScreen() {
   const [cart, setCart] = useState<any[]>([]);
+  const { user } = useUser();  // ✅ Necesario para evitar el error
 
   useEffect(() => {
     load();
@@ -39,16 +43,12 @@ export default function CartScreen() {
     setCart(updated);
   }
 
-  // 🟣 Vista de carrito vacío
+  // 🟣 Carrito vacío
   if (cart.length === 0) {
     return (
-        
       <View style={styles.emptyContainer}>
-  
         <Text style={styles.emptyTitle}>Mi Carrito Gaming</Text>
-
         <Text style={styles.emptyIcon}>🛒</Text>
-
         <Text style={styles.emptySubtitle}>Tu carrito gaming está vacío</Text>
 
         <TouchableOpacity onPress={() => router.push("/tabs/home")}>
@@ -63,78 +63,104 @@ export default function CartScreen() {
     );
   }
 
-  // 🟣 Vista del carrito con productos
+  // 🟣 Vista con productos
   return (
-    <ScrollView style={styles.container}>
-        <SimpleHeader />
-      <Text style={styles.title}>Mi Carrito Gaming</Text>
+    <SafeAreaView style={styles.screen}>
+      <SimpleHeader />
 
-      {/* Items en el carrito */}
-      {cart.map((item) => (
-        <View key={item.id} style={styles.card}>
-          <Image source={{ uri: item.image }} style={styles.productImage} />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContainer}
+      >
+        <Text style={styles.title}>Mi Carrito Gaming</Text>
 
-          <View style={{ flex: 1, marginLeft: spacing.md }}>
-            <Text style={styles.productName}>{item.name}</Text>
-            <Text style={styles.productPrice}>${item.price.toLocaleString()}</Text>
+        {/* Items */}
+        {cart.map((item) => (
+          <View key={item.id} style={styles.card}>
+            <Image source={{ uri: item.image }} style={styles.productImage} />
 
-            {/* Etiqueta de categoría */}
-            <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{item.categoryLabel}</Text>
+            <View style={{ flex: 1, marginLeft: spacing.md }}>
+              <Text style={styles.productName}>{item.name}</Text>
+              <Text style={styles.productPrice}>
+                ${item.price.toLocaleString()}
+              </Text>
+
+              <View style={styles.categoryTag}>
+                <Text style={styles.categoryText}>{item.categoryLabel}</Text>
+              </View>
+
+              <View style={styles.qtyContainer}>
+                <TouchableOpacity
+                  style={styles.qtyButton}
+                  onPress={() => changeQty(item.id, item.qty - 1)}
+                >
+                  <Text style={styles.qtyButtonText}>−</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.qtyValue}>{item.qty}</Text>
+
+                <TouchableOpacity
+                  style={styles.qtyButton}
+                  onPress={() => changeQty(item.id, item.qty + 1)}
+                >
+                  <Text style={styles.qtyButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Controles de cantidad */}
-            <View style={styles.qtyContainer}>
-              <TouchableOpacity
-                style={styles.qtyButton}
-                onPress={() => changeQty(item.id, item.qty - 1)}
-              >
-                <Text style={styles.qtyButtonText}>−</Text>
-              </TouchableOpacity>
+            <View style={styles.priceRight}>
+              <Text style={styles.priceRightText}>
+                ${(item.price * item.qty).toLocaleString()}
+              </Text>
 
-              <Text style={styles.qtyValue}>{item.qty}</Text>
-
-              <TouchableOpacity
-                style={styles.qtyButton}
-                onPress={() => changeQty(item.id, item.qty + 1)}
-              >
-                <Text style={styles.qtyButtonText}>+</Text>
+              <TouchableOpacity onPress={() => remove(item.id)}>
+                <Text style={styles.removeIcon}>🗑️</Text>
               </TouchableOpacity>
             </View>
           </View>
+        ))}
 
-          <View style={styles.priceRight}>
-            <Text style={styles.priceRightText}>
-              ${(item.price * item.qty).toLocaleString()}
+        {/* Resumen */}
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>
+              Subtotal ({cart.length} productos):
             </Text>
+            <Text style={styles.summaryValue}>
+              ${total().toLocaleString()}
+            </Text>
+          </View>
 
-            <TouchableOpacity onPress={() => remove(item.id)}>
-              <Text style={styles.removeIcon}>🗑️</Text>
-            </TouchableOpacity>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Envío:</Text>
+            <Text style={styles.freeShipping}>GRATIS</Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryTotal}>Total:</Text>
+            <Text style={styles.summaryTotalValue}>
+              ${total().toLocaleString()}
+            </Text>
           </View>
         </View>
-      ))}
+      </ScrollView>
 
-      {/* Resumen */}
-      <View style={styles.summaryBox}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>
-            Subtotal ({cart.length} productos):
-          </Text>
-          <Text style={styles.summaryValue}>${total().toLocaleString()}</Text>
-        </View>
+      {/* 🟣 FOOTER SIN position:absolute -> YA NO SE TAPA */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          onPress={async () => {
+            if (!user) {
+              alert("Debes iniciar sesión para completar la compra");
+              return;
+            }
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Envío:</Text>
-          <Text style={styles.freeShipping}>GRATIS</Text>
-        </View>
+            const orderId = await saveOrder(user.id, cart, total());
+            await clearCart();
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryTotal}>Total:</Text>
-          <Text style={styles.summaryTotalValue}>${total().toLocaleString()}</Text>
-        </View>
+            router.push("/checkout/success");
+          }}
+        >
 
-        <TouchableOpacity>
           <LinearGradient
             colors={[colors.primary, colors.primaryDark]}
             style={styles.payButton}
@@ -143,24 +169,31 @@ export default function CartScreen() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
-/* 🎨 ESTILOS VISUALES EXACTOS AL FIGMA */
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    paddingBottom: 80, // deja espacio real del tab bar
+  },
+
   container: {
     padding: spacing.lg,
+  },
+
+  scrollContainer: {
+    paddingBottom: 40,
   },
 
   title: {
     fontSize: 22,
     fontWeight: "700",
     marginBottom: spacing.md,
-    color: "#000",
   },
 
-  /* ——————— Carrito Vacío ——————— */
+  /* ----------------- Carrito vacío ---------------- */
   emptyContainer: {
     flex: 1,
     alignItems: "center",
@@ -197,17 +230,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* ——————— Producto ——————— */
+  /* ----------------- Producto ---------------- */
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
     padding: spacing.md,
     borderRadius: radius.lg,
     marginBottom: spacing.md,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
   },
 
   productImage: {
@@ -219,7 +248,6 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 4,
   },
 
   productPrice: {
@@ -284,16 +312,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  /* ——————— Resumen ——————— */
+  /* ----------------- Resumen ---------------- */
   summaryBox: {
     marginTop: spacing.lg,
     padding: spacing.lg,
     backgroundColor: "#fff",
     borderRadius: radius.lg,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
   },
 
   summaryRow: {
@@ -302,25 +326,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
 
-  summaryLabel: {
-    color: "#555",
-    fontSize: 15,
-  },
-
-  summaryValue: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
-  freeShipping: {
-    color: "green",
-    fontWeight: "700",
-  },
-
-  summaryTotal: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
+  summaryLabel: { color: "#555", fontSize: 15 },
+  summaryValue: { fontSize: 15, fontWeight: "600" },
+  freeShipping: { color: "green", fontWeight: "700" },
+  summaryTotal: { fontSize: 18, fontWeight: "700" },
 
   summaryTotalValue: {
     fontSize: 20,
@@ -328,8 +337,15 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
 
+  /* ----------------- Footer ---------------- */
+  footer: {
+    padding: spacing.lg,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+
   payButton: {
-    marginTop: spacing.lg,
     paddingVertical: 14,
     borderRadius: radius.xl,
   },
