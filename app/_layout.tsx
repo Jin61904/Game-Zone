@@ -14,7 +14,6 @@ export default function RootLayout() {
     }
     loadUser();
   }, []);
-
   return (
     <>
       <Slot />
