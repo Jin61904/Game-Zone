@@ -14,8 +14,7 @@ import {
 
 import { useAuthModal } from "@/lib/authModalStore";
 import { useUser } from "@/lib/userStore";
-
-import { loginUser, registerUser } from "@/services/authService";
+import { loginUser, registerUser } from "@/Services/authService";
 
 interface FormData {
   email: string;

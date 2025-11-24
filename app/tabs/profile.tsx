@@ -1,13 +1,16 @@
+import { ProductCard } from "@/components/ProductCard";
 import { SimpleHeader } from "@/components/headers/SimpleHeader";
+import { addToCart } from "@/lib/cart";
+import { getFavorites, getFavoritesCount, toggleFavorite } from "@/lib/favorites";
 import { useAuthModal } from "@/lib/authModalStore";
 import { useCartCount } from "@/lib/cartStore";
-import { getFavoritesCount } from "@/lib/favorites";
 import { useUser } from "@/lib/userStore";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  FlatList,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +26,8 @@ export default function ProfileScreen() {
   const { count: cartCount } = useCartCount();
 
   const [favCount, setFavCount] = useState(0);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [favorites, setFavorites] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadFavs() {
@@ -32,18 +37,44 @@ export default function ProfileScreen() {
     loadFavs();
   }, []);
 
+  useEffect(() => {
+    if (showFavorites) {
+      loadFavorites();
+    }
+  }, [showFavorites]);
+
+  async function loadFavorites() {
+    const items = await getFavorites();
+    setFavorites(items);
+    const c = await getFavoritesCount();
+    setFavCount(c);
+  }
+
+  async function handleRemoveFavorite(product: any) {
+    await toggleFavorite(product);
+    await loadFavorites();
+  }
+
   return (
     <View style={styles.container}>
       <SimpleHeader onCartPress={() => router.push("/tabs/cart")} />
 
       {!user ? (
         <NotLoggedView open={open} />
+      ) : showFavorites ? (
+        <FavoritesView
+          favorites={favorites}
+          onBack={() => setShowFavorites(false)}
+          onRemoveFavorite={handleRemoveFavorite}
+          onRefresh={loadFavorites}
+        />
       ) : (
         <LoggedView
           user={user}
           cartCount={cartCount}
           favCount={favCount}
           onLogout={logout}
+          onShowFavorites={() => setShowFavorites(true)}
         />
       )}
     </View>
@@ -106,7 +137,7 @@ function NotLoggedView({ open }) {
 /* -------------------------
     LOGGED VIEW
 --------------------------- */
-function LoggedView({ user, cartCount, favCount, onLogout }) {
+function LoggedView({ user, cartCount, favCount, onLogout, onShowFavorites }) {
   return (
     <ScrollView contentContainerStyle={styles.loggedContainer}>
       <View style={styles.card}>
@@ -145,7 +176,7 @@ function LoggedView({ user, cartCount, favCount, onLogout }) {
         <ProfileButton
           icon="heart-outline"
           label={`Mis Favoritos (${favCount})`}
-          onPress={() => router.push("/favorites")}
+          onPress={onShowFavorites}
         />
 
         <ProfileButton
@@ -162,6 +193,85 @@ function LoggedView({ user, cartCount, favCount, onLogout }) {
         />
       </View>
     </ScrollView>
+  );
+}
+
+/* -------------------------
+    FAVORITES VIEW
+--------------------------- */
+function FavoritesView({ favorites, onBack, onRemoveFavorite, onRefresh }) {
+  // Estado vacío
+  if (favorites.length === 0) {
+    return (
+      <View style={styles.favoritesContainer}>
+        <View style={styles.favoritesHeader}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.favoritesTitle}>Mis Favoritos</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="heart-outline" size={64} color={colors.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No tienes favoritos aún</Text>
+          <Text style={styles.emptyText}>
+            Explora nuestra tienda y guarda tus productos favoritos
+          </Text>
+          <TouchableOpacity
+            style={styles.exploreBtn}
+            onPress={() => router.push("/tabs/home")}
+          >
+            <Text style={styles.exploreBtnText}>Explorar Productos</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.favoritesContainer}>
+      <View style={styles.favoritesHeader}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.favoritesTitle}>Mis Favoritos</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.favoritesSubheader}>
+        <Text style={styles.favoritesSubtitle}>
+          {favorites.length}{" "}
+          {favorites.length === 1 ? "producto guardado" : "productos guardados"}
+        </Text>
+      </View>
+
+      <FlatList
+        data={favorites}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.favoritesListContent}
+        renderItem={({ item }) => (
+          <View style={styles.cardWrapper}>
+            <ProductCard
+              product={item}
+              onPress={() => router.push(`/product/${item.id}`)}
+              onFavorite={() => onRemoveFavorite(item)}
+              onAddToCart={() => addToCart(item)}
+            />
+            <TouchableOpacity
+              style={styles.removeBtn}
+              onPress={() => onRemoveFavorite(item)}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              <Text style={styles.removeBtnText}>Quitar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
   );
 }
 
@@ -337,5 +447,103 @@ const styles = StyleSheet.create({
 
   optionTextDanger: {
     color: colors.danger,
+  },
+
+  favoritesContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  favoritesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  favoritesTitle: {
+    fontSize: fonts.title2,
+    fontWeight: fonts.bold,
+    color: colors.textPrimary,
+  },
+  favoritesSubheader: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  favoritesSubtitle: {
+    fontSize: fonts.body,
+    color: colors.textSecondary,
+  },
+  favoritesListContent: {
+    paddingBottom: 120,
+  },
+  cardWrapper: {
+    position: "relative",
+  },
+  removeBtn: {
+    position: "absolute",
+    bottom: spacing.md + 8,
+    right: spacing.lg + 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 4,
+    ...{
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+  },
+  removeBtnText: {
+    fontSize: 12,
+    color: colors.danger,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIcon: {
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+  emptyText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: spacing.xl,
+    lineHeight: 22,
+  },
+  exploreBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 30,
+  },
+  exploreBtnText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

@@ -1,7 +1,7 @@
 import { SimpleHeader } from "@/components/headers/SimpleHeader";
 import { clearCart, getCart, removeFromCart, updateQuantity } from "@/lib/cart";
 import { useUser } from "@/lib/userStore";
-import { saveOrder } from "@/services/orderService";
+import { saveOrder } from "@/Services/orderService";
 import { colors, radius, spacing } from "@/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
