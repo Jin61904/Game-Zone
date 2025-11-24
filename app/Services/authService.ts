@@ -1,7 +1,13 @@
 // src/services/authService.ts
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  signInWithEmailAndPassword,
+  updatePassword
+} from "firebase/auth";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 export interface AppUser {
   id: string;
@@ -63,4 +69,36 @@ export async function loginUser(
   return {
     user: snap.data() as AppUser,
   };
+}
+
+/** ============================
+ *  ACTUALIZAR NOMBRE DE USUARIO
+ *  ============================ */
+export async function updateUsername(
+  userId: string,
+  newUsername: string
+): Promise<void> {
+  await updateDoc(doc(db, "users", userId), {
+    username: newUsername,
+  });
+}
+
+/** ============================
+ *  CAMBIAR CONTRASEÑA
+ *  ============================ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.email) {
+    throw new Error("Usuario no autenticado");
+  }
+
+  // Reautenticar con la contraseña actual
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+
+  // Actualizar la contraseña
+  await updatePassword(user, newPassword);
 }

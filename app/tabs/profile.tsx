@@ -5,15 +5,20 @@ import { getFavorites, getFavoritesCount, toggleFavorite } from "@/lib/favorites
 import { useAuthModal } from "@/lib/authModalStore";
 import { useCartCount } from "@/lib/cartStore";
 import { useUser } from "@/lib/userStore";
+import { changePassword, updateUsername } from "@/Services/authService";
 import { colors, fonts, radius, spacing } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -27,6 +32,7 @@ export default function ProfileScreen() {
 
   const [favCount, setFavCount] = useState(0);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
 
   useEffect(() => {
@@ -68,6 +74,15 @@ export default function ProfileScreen() {
           onRemoveFavorite={handleRemoveFavorite}
           onRefresh={loadFavorites}
         />
+      ) : showSettings ? (
+        <SettingsView
+          user={user}
+          onBack={() => setShowSettings(false)}
+          onUpdateUser={async (updatedUser) => {
+            await useUser.getState().setUser(updatedUser);
+            setShowSettings(false);
+          }}
+        />
       ) : (
         <LoggedView
           user={user}
@@ -75,6 +90,7 @@ export default function ProfileScreen() {
           favCount={favCount}
           onLogout={logout}
           onShowFavorites={() => setShowFavorites(true)}
+          onShowSettings={() => setShowSettings(true)}
         />
       )}
     </View>
@@ -137,7 +153,7 @@ function NotLoggedView({ open }) {
 /* -------------------------
     LOGGED VIEW
 --------------------------- */
-function LoggedView({ user, cartCount, favCount, onLogout, onShowFavorites }) {
+function LoggedView({ user, cartCount, favCount, onLogout, onShowFavorites, onShowSettings }) {
   return (
     <ScrollView contentContainerStyle={styles.loggedContainer}>
       <View style={styles.card}>
@@ -170,7 +186,7 @@ function LoggedView({ user, cartCount, favCount, onLogout, onShowFavorites }) {
         <ProfileButton
           icon="settings-outline"
           label="Configuración de Cuenta"
-          onPress={() => {}}
+          onPress={onShowSettings}
         />
 
         <ProfileButton
@@ -271,6 +287,296 @@ function FavoritesView({ favorites, onBack, onRemoveFavorite, onRefresh }) {
         )}
         showsVerticalScrollIndicator={false}
       />
+    </View>
+  );
+}
+
+/* -------------------------
+    SETTINGS VIEW
+--------------------------- */
+function SettingsView({ user, onBack, onUpdateUser }) {
+  const [username, setUsername] = useState(user.username);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{
+    username?: string;
+    currentPassword?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  async function handleUpdateUsername() {
+    if (!username.trim()) {
+      setErrors({ username: "El nombre de usuario es requerido" });
+      return;
+    }
+    if (username.length < 3) {
+      setErrors({ username: "Mínimo 3 caracteres" });
+      return;
+    }
+    if (username === user.username) {
+      setSuccessMessage("No hay cambios en el nombre de usuario");
+      setTimeout(() => setSuccessMessage(""), 3000);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrors({});
+      await updateUsername(user.id, username);
+      
+      const updatedUser = { ...user, username };
+      await onUpdateUser(updatedUser);
+      
+      Alert.alert("Éxito", "Nombre de usuario actualizado correctamente");
+    } catch (error: any) {
+      setErrors({ username: error.message || "Error al actualizar el nombre de usuario" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    const newErrors: typeof errors = {};
+
+    if (!currentPassword) {
+      newErrors.currentPassword = "La contraseña actual es requerida";
+    }
+    if (!newPassword) {
+      newErrors.newPassword = "La nueva contraseña es requerida";
+    } else if (newPassword.length < 6) {
+      newErrors.newPassword = "Mínimo 6 caracteres";
+    }
+    if (newPassword !== confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrors({});
+      await changePassword(currentPassword, newPassword);
+      
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      Alert.alert("Éxito", "Contraseña actualizada correctamente");
+    } catch (error: any) {
+      let friendly = "Error al cambiar la contraseña";
+      if (error.code === "auth/wrong-password") {
+        friendly = "La contraseña actual es incorrecta";
+        setErrors({ currentPassword: friendly });
+      } else if (error.code === "auth/weak-password") {
+        friendly = "La nueva contraseña es muy débil";
+        setErrors({ newPassword: friendly });
+      } else {
+        setErrors({ newPassword: friendly });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <View style={styles.settingsContainer}>
+      <View style={styles.settingsHeader}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.settingsTitle}>Configuración de Cuenta</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.settingsContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Información de la cuenta */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.sectionTitle}>Información de la Cuenta</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                style={[styles.input, { color: colors.textSecondary }]}
+                value={user.email}
+                editable={false}
+                placeholder="Email"
+              />
+              <Text style={styles.infoText}>El email no se puede cambiar</Text>
+            </View>
+          </View>
+
+          {/* Editar nombre de usuario */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.sectionTitle}>Nombre de Usuario</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nombre de usuario</Text>
+              <TextInput
+                style={styles.input}
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  if (errors.username) setErrors({ ...errors, username: undefined });
+                }}
+                placeholder="Tu nombre de usuario"
+                autoCapitalize="none"
+              />
+              {errors.username && (
+                <Text style={{ color: colors.danger, fontSize: 12, marginTop: 4 }}>
+                  {errors.username}
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity
+              style={[styles.saveButton, loading && { opacity: 0.6 }]}
+              onPress={handleUpdateUsername}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? "Guardando..." : "Guardar Cambios"}
+              </Text>
+            </TouchableOpacity>
+            {successMessage && (
+              <Text style={{ color: colors.success, fontSize: 12, marginTop: 8, textAlign: "center" }}>
+                {successMessage}
+              </Text>
+            )}
+          </View>
+
+          {/* Cambiar contraseña */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.sectionTitle}>Cambiar Contraseña</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Contraseña Actual</Text>
+              <View style={{ position: "relative" }}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={currentPassword}
+                  onChangeText={(text) => {
+                    setCurrentPassword(text);
+                    if (errors.currentPassword) setErrors({ ...errors, currentPassword: undefined });
+                  }}
+                  placeholder="Contraseña actual"
+                  secureTextEntry={!showCurrentPassword}
+                />
+                <TouchableOpacity
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: 12,
+                  }}
+                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  <Ionicons
+                    name={showCurrentPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.currentPassword && (
+                <Text style={{ color: colors.danger, fontSize: 12, marginTop: 4 }}>
+                  {errors.currentPassword}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nueva Contraseña</Text>
+              <View style={{ position: "relative" }}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    if (errors.newPassword) setErrors({ ...errors, newPassword: undefined });
+                  }}
+                  placeholder="Nueva contraseña"
+                  secureTextEntry={!showNewPassword}
+                />
+                <TouchableOpacity
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: 12,
+                  }}
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <Ionicons
+                    name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.newPassword && (
+                <Text style={{ color: colors.danger, fontSize: 12, marginTop: 4 }}>
+                  {errors.newPassword}
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirmar Nueva Contraseña</Text>
+              <View style={{ position: "relative" }}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
+                  }}
+                  placeholder="Confirma la nueva contraseña"
+                  secureTextEntry={!showConfirmPassword}
+                />
+                <TouchableOpacity
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: 12,
+                  }}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.confirmPassword && (
+                <Text style={{ color: colors.danger, fontSize: 12, marginTop: 4 }}>
+                  {errors.confirmPassword}
+                </Text>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.saveButton, loading && { opacity: 0.6 }]}
+              onPress={handleChangePassword}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? "Cambiando..." : "Cambiar Contraseña"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -545,5 +851,86 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  settingsContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  settingsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  settingsTitle: {
+    fontSize: fonts.title2,
+    fontWeight: fonts.bold,
+    color: colors.textPrimary,
+  },
+  settingsContent: {
+    padding: spacing.lg,
+  },
+  settingsSection: {
+    backgroundColor: "white",
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: fonts.subtitle,
+    fontWeight: fonts.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  inputGroup: {
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    fontSize: fonts.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fonts.body,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fonts.body,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+  },
+  saveButton: {
+    backgroundColor: colors.primaryDark,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "center",
+    marginTop: spacing.md,
+  },
+  saveButtonText: {
+    color: "white",
+    fontSize: fonts.body,
+    fontWeight: fonts.semibold,
+  },
+  infoText: {
+    fontSize: fonts.bodySmall,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    fontStyle: "italic",
   },
 });
